@@ -1,6 +1,11 @@
+use std::sync::Arc;
+
 use tracing::{error, info};
 
-use rust_clean_project::{config::config_loader, infastructure::postgres::postgres_connection};
+use rust_clean_project::{
+    config::config_loader,
+    infastructure::{axum_http::routers::http_serve::start, postgres::postgres_connection},
+};
 
 #[tokio::main]
 async fn main() {
@@ -18,7 +23,7 @@ async fn main() {
 
     info!("ENV has been loaded");
 
-    let _ = match postgres_connection::establish_connection(&dotenvy_env.database.url) {
+    let pg = match postgres_connection::establish_connection(&dotenvy_env.database.url) {
         Ok(pool) => pool,
         Err(e) => {
             error!("Failed to Establis Connection to Postgres: {}", e);
@@ -27,4 +32,8 @@ async fn main() {
     };
 
     info!("Postgres Connection has been establish");
+
+    start(Arc::new(dotenvy_env), Arc::new(pg))
+        .await
+        .expect("Failed to Start Server")
 }
