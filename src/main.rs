@@ -4,7 +4,7 @@ use tracing::{error, info};
 
 use rust_clean_project::{
     config::config_loader,
-    infastructure::{axum_http::routers::http_serve::start, postgres::postgres_connection},
+    infastructure::{axum_http::http_serve::start, postgres::postgres_connection},
 };
 
 #[tokio::main]
