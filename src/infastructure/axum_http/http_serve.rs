@@ -48,7 +48,6 @@ pub async fn start(config: Arc<DotEnvyConfig>, db_pool: Arc<PgPoolSquad>) -> Res
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
-
     Ok(())
 }
 

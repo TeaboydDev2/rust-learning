@@ -7,18 +7,18 @@ use crate::{
     infastructure::postgres::postgres_connection::PgPoolSquad,
 };
 
-pub struct JourneyLegerPostgres {
+pub struct JourneyLedgerPostgres {
     db_pool: Arc<PgPoolSquad>,
 }
 
-impl JourneyLegerPostgres {
+impl JourneyLedgerPostgres {
     pub fn new(db_pool: Arc<PgPoolSquad>) -> Self {
         Self { db_pool }
     }
 }
 
 #[async_trait]
-impl JourneyLedgerRepository for JourneyLegerPostgres {
+impl JourneyLedgerRepository for JourneyLedgerPostgres {
     async fn in_journey(&self, quest_id: i32, guild_commander_id: i32) -> Result<i32> {
         unimplemented!()
     }
