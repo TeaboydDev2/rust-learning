@@ -1,5 +1,7 @@
 use anyhow::Result;
 use axum::async_trait;
+use diesel::dsl::insert_into;
+use diesel::prelude::*;
 use std::sync::Arc;
 
 use crate::{
@@ -7,7 +9,7 @@ use crate::{
         entities::guild_commanders::{GuildCommanderEntity, RegisterGuildCommanderEntity},
         repository::guild_commanders::GuildCommandersRepository,
     },
-    infastructure::postgres::postgres_connection::PgPoolSquad,
+    infastructure::postgres::{postgres_connection::PgPoolSquad, schema::guild_commanders},
 };
 
 pub struct GuildCommanderPostgres {
@@ -26,10 +28,24 @@ impl GuildCommandersRepository for GuildCommanderPostgres {
         &self,
         register_guild_commander_entity: RegisterGuildCommanderEntity,
     ) -> Result<i32> {
-        unimplemented!()
+        let mut conn = Arc::clone(&self.db_pool).get()?;
+
+        let result = insert_into(guild_commanders::table)
+            .values(register_guild_commander_entity)
+            .returning(guild_commanders::id)
+            .get_result::<i32>(&mut conn)?;
+
+        Ok(result)
     }
 
     async fn find_by_username(&self, username: String) -> Result<GuildCommanderEntity> {
-        unimplemented!()
+        let mut conn = Arc::clone(&self.db_pool).get()?;
+
+        let result = guild_commanders::table
+            .filter(guild_commanders::username.eq(username))
+            .select(GuildCommanderEntity::as_select())
+            .first::<GuildCommanderEntity>(&mut conn)?;
+
+        Ok(result)
     }
 }

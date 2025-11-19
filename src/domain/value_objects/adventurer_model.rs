@@ -4,8 +4,8 @@ use crate::domain::entities::adventurers::RegisterAdventurerEntity;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegisterAdventurerModel {
-    username: String,
-    password: String,
+    pub username: String,
+    pub password: String,
 }
 
 impl RegisterAdventurerModel {

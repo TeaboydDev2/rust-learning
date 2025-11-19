@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use std::sync::Arc;
 
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
         repository::adventurers::AdventurersRepository,
         value_objects::adventurer_model::RegisterAdventurerModel,
     },
-    infastructure::postgres::repository::adventurers::AdventurerPostgres,
+    infastructure::argon2_hashing::{self, hash},
 };
 
 pub struct AdventurersUseCase<T>
@@ -30,6 +30,17 @@ where
         &self,
         mut register_adventurer_model: RegisterAdventurerModel,
     ) -> Result<i32> {
-        unimplemented!()
+        let hashed_password = argon2_hashing::hash(register_adventurer_model.password.clone())?;
+
+        register_adventurer_model.password = hashed_password;
+
+        let register_entity = register_adventurer_model.to_entity();
+
+        let adventurer_id = self
+            .adventurers_repository
+            .register(register_entity)
+            .await?;
+
+        Ok(adventurer_id)
     }
 }

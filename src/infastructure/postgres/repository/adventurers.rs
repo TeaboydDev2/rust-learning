@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use axum::async_trait;
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
+use diesel::{dsl::insert_into, prelude::*};
 
 use crate::{
     domain::{
         entities::adventurers::{AdventurerEntity, RegisterAdventurerEntity},
         repository::adventurers::AdventurersRepository,
-        value_objects::adventurer_model::RegisterAdventurerModel,
     },
-    infastructure::postgres::postgres_connection::PgPoolSquad,
+    infastructure::postgres::{postgres_connection::PgPoolSquad, schema::adventurers},
 };
 
 pub struct AdventurerPostgres {
@@ -31,10 +31,24 @@ impl AdventurersRepository for AdventurerPostgres {
      */
 
     async fn register(&self, register_adventurer_model: RegisterAdventurerEntity) -> Result<i32> {
-        unimplemented!()
+        let mut conn = Arc::clone(&self.db_pool).get()?;
+
+        let result = insert_into(adventurers::table)
+            .values(register_adventurer_model)
+            .returning(adventurers::id)
+            .get_result::<i32>(&mut conn)?;
+
+        Ok(result)
     }
 
     async fn find_by_username(&self, username: String) -> Result<AdventurerEntity> {
-        unimplemented!()
+        let mut conn = Arc::clone(&self.db_pool).get()?;
+
+        let result = adventurers::table
+            .filter(adventurers::username.eq(username))
+            .select(AdventurerEntity::as_select())
+            .first::<AdventurerEntity>(&mut conn)?;
+
+        Ok(result)
     }
 }

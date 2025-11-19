@@ -1,15 +1,29 @@
 use std::sync::Arc;
 
-use axum::{Router, extract::State, response::IntoResponse, routing::post};
+use ::cookie::time::Duration;
+use axum::{
+    Json, Router,
+    extract::State,
+    http::{HeaderMap, HeaderValue, StatusCode, header},
+    response::IntoResponse,
+    routing::post,
+};
+use axum_extra::extract::cookie::{Cookie, CookieJar};
 
 use crate::{
     application::usecase::authentication::AuthenticationUseCase,
+    config::{config_loader::get_stage, stage::Stage},
     domain::repository::{
         adventurers::AdventurersRepository, guild_commanders::GuildCommandersRepository,
     },
-    infastructure::postgres::{
-        postgres_connection::PgPoolSquad,
-        repository::{adventurers::AdventurerPostgres, guild_commanders::GuildCommanderPostgres},
+    infastructure::{
+        jwt_authentication::authentication_model::LoginModel,
+        postgres::{
+            postgres_connection::PgPoolSquad,
+            repository::{
+                adventurers::AdventurerPostgres, guild_commanders::GuildCommanderPostgres,
+            },
+        },
     },
 };
 
@@ -37,15 +51,51 @@ pub fn routes(db_pool: Arc<PgPoolSquad>) -> Router {
 
 pub async fn adventurers_login<T1, T2>(
     State(authentication_use_case): State<Arc<AuthenticationUseCase<T1, T2>>>,
+    Json(login_model): Json<LoginModel>,
 ) -> impl IntoResponse
 where
     T1: AdventurersRepository + Send + Sync,
     T2: GuildCommandersRepository + Send + Sync,
 {
+    match authentication_use_case.adventurers_login(login_model).await {
+        Ok(passport) => {
+            let mut act_cookie = Cookie::build(("act", passport.access_token.clone()))
+                .path("/")
+                .same_site(cookie::SameSite::Lax)
+                .http_only(true)
+                .max_age(Duration::days(14));
+
+            let mut rft_cookie = Cookie::build(("rft", passport.refresh_token.clone()))
+                .path("/")
+                .same_site(cookie::SameSite::Lax)
+                .http_only(true)
+                .max_age(Duration::days(14));
+
+            if get_stage() == Stage::Production {
+                act_cookie = act_cookie.secure(true);
+                rft_cookie = rft_cookie.secure(true);
+            }
+
+            let mut headers = HeaderMap::new();
+            headers.append(
+                header::SET_COOKIE,
+                HeaderValue::from_str(&act_cookie.to_string()).unwrap(),
+            );
+
+            headers.append(
+                header::SET_COOKIE,
+                HeaderValue::from_str(&rft_cookie.to_string()).unwrap(),
+            );
+
+            (StatusCode::OK, "Login successfully").into_response()
+        }
+        Err(e) => (StatusCode::UNAUTHORIZED, e.to_string()).into_response(),
+    }
 }
 
 pub async fn adventurers_refresh_token<T1, T2>(
     State(authentication_use_case): State<Arc<AuthenticationUseCase<T1, T2>>>,
+    jar: CookieJar,
 ) -> impl IntoResponse
 where
     T1: AdventurersRepository + Send + Sync,
@@ -55,6 +105,7 @@ where
 
 pub async fn guild_commanders_login<T1, T2>(
     State(authentication_use_case): State<Arc<AuthenticationUseCase<T1, T2>>>,
+    Json(login_model): Json<LoginModel>,
 ) -> impl IntoResponse
 where
     T1: AdventurersRepository + Send + Sync,
@@ -64,6 +115,7 @@ where
 
 pub async fn guild_commanders_refresh_token<T1, T2>(
     State(authentication_use_case): State<Arc<AuthenticationUseCase<T1, T2>>>,
+    jar: CookieJar,
 ) -> impl IntoResponse
 where
     T1: AdventurersRepository + Send + Sync,

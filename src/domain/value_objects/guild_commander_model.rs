@@ -4,8 +4,8 @@ use crate::domain::entities::guild_commanders::RegisterGuildCommanderEntity;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegisterGuildCommanderModel {
-    username: String,
-    password: String,
+    pub username: String,
+    pub password: String,
 }
 
 impl RegisterGuildCommanderModel {
